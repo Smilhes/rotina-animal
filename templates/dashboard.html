@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Agenda do Dia</h1>
+    <div class="text-muted">{{ "15 de Outubro de 2023" }}</div>
+</div>
+
+<!-- Cards de Resumo (KPIs) -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card card-tv bg-primary text-white p-3 mb-3">
+            <h5>Total do Dia</h5>
+            <h2 class="display-4 fw-bold">{{ dados.stats.hoje }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-tv bg-warning text-dark p-3 mb-3">
+            <h5>Pendentes</h5>
+            <h2 class="display-4 fw-bold">{{ dados.stats.pendentes }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-tv bg-success text-white p-3 mb-3">
+            <h5>Concluídos</h5>
+            <h2 class="display-4 fw-bold">{{ dados.stats.concluidos }}</h2>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Serviços -->
+<div class="card card-tv">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="p-3">Horário</th>
+                        <th>Pet / Tutor</th>
+                        <th>Serviço</th>
+                        <th>Status</th>
+                        <th class="text-end p-3">Ações Rápidas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in dados.agenda %}
+                    <tr>
+                        <td class="p-3 fw-bold fs-5">{{ item.horario }}</td>
+                        <td>
+                            <span class="fw-bold">{{ item.pet }}</span><br>
+                            <small class="text-muted">{{ item.tutor }}</small>
+                        </td>
+                        <td>{{ item.servico }}</td>
+                        <td><span class="badge bg-{{ item.status_class }} p-2 fs-6">{{ item.status }}</span></td>
+                        <td class="text-end p-3">
+                            <button class="btn btn-sm btn-outline-success me-1" title="Concluir"><i class="bi bi-check-circle"></i></button>
+                            <button class="btn btn-sm btn-outline-primary" title="Pago"><i class="bi bi-cash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
