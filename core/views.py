@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from .models import Pet
 
 # Mock Data: Simulando banco de dados para o Dashboard
 DASHBOARD_DATA = {
@@ -30,3 +31,13 @@ def agendamento_view(request):
 
 def historico_view(request):
     return render(request, 'historico.html', {'historico': HISTORICO_DATA})
+
+def cadastro_pet_view(request):
+    if request.method == 'POST':
+        nome_pet = request.POST.get('nome_pet')
+        raca_pet = request.POST.get('raca_pet')
+        porte_pet = request.POST.get('porte_pet')
+        # For now, just save the pet, ignoring tutor fields
+        Pet.objects.create(nome_pet=nome_pet, raca_pet=raca_pet, porte_pet=porte_pet)
+        return redirect('dashboard')  # or some success page
+    return render(request, 'cadastro_pet.html')
