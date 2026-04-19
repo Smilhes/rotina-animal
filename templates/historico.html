@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Histórico de Serviços</h1>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="card card-tv mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-start-0" placeholder="Buscar por Pet, Tutor ou Serviço...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select">
+                    <option selected>Filtrar por Status (Todos)</option>
+                    <option>Pago</option>
+                    <option>Pendente</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Histórico -->
+<div class="card card-tv">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 1.1rem;">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="p-3">Data</th>
+                        <th>Pet</th>
+                        <th>Raça</th>
+                        <th>Serviço Prestado</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in historico %}
+                    <tr>
+                        <td class="p-3">{{ item.data }}</td>
+                        <td class="fw-bold text-primary">{{ item.pet }}</td>
+                        <td>{{ item.raca }}</td>
+                        <td>{{ item.servico }}</td>
+                        <td class="fw-bold">R$ {{ item.valor }}</td>
+                        <td>
+                            {% if item.status == 'Pago' %}
+                                <span class="badge bg-success-subtle text-success border border-success">PAGO</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning">PENDENTE</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

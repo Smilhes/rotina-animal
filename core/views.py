@@ -17,11 +17,33 @@ HISTORICO_DATA = [
     {'data': '12/05/2023', 'pet': 'Luna', 'tutor': 'Ana Paula', 'servico': 'Tosa Higiênica', 'valor': 'R$ 60,00'},
 ]
 
+# Mock para Cliente e seus Pets (Relação 1 para N)
+CLIENTE_MOCK = {
+    'tutor': 'João da Silva',
+    'telefone': '(11) 98888-7777',
+    'pets': [
+        {'nome': 'Thor', 'especie': 'Cão', 'raca': 'Golden', 'idade': '3 anos'},
+        {'nome': 'Luna', 'especie': 'Gato', 'raca': 'Persa', 'idade': '1 ano'},
+    ]
+}
+
+HISTORICO_MOCK = [
+    {'data': '15/10/2023', 'pet': 'Thor', 'raca': 'Golden', 'servico': 'Banho + Tosa', 'valor': '120,00', 'status': 'Pago'},
+    {'data': '14/10/2023', 'pet': 'Mel', 'raca': 'Poodle', 'servico': 'Corte de Unha', 'valor': '30,00', 'status': 'Pago'},
+    {'data': '10/10/2023', 'pet': 'Bolinha', 'raca': 'SRD', 'servico': 'Banho M', 'valor': '60,00', 'status': 'Pendente'},
+]
+
 def login_view(request):
     return render(request, 'login.html')
 
 def dashboard_view(request):
     return render(request, 'dashboard.html', {'dados': DASHBOARD_DATA})
+
+def cadastro_cliente_view(request):
+    return render(request, 'cadastro_cliente.html', {'cliente': CLIENTE_MOCK})
+
+def historico_view(request):
+    return render(request, 'historico.html', {'historico': HISTORICO_MOCK})
 
 def cadastro_cliente_view(request):
     return render(request, 'cadastro_cliente.html')
