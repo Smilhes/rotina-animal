@@ -28,6 +28,7 @@
                     </button>
                 </div>
                 <input type="hidden" id="clienteId" name="cliente_id">
+                <input type="hidden" id="petId" name="pet_id">
             </div>
 
             <div class="col-md-6">
@@ -238,6 +239,42 @@ document.addEventListener('DOMContentLoaded', function() {
         nenhumResultado.style.display = 'none';
         semBusca.style.display = 'block';
         listaClientes.innerHTML = '';
+    });
+
+    // Processar formulário de agendamento
+    document.getElementById('formularioAgendamento').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const button = this.querySelector('button[type="submit"]');
+        const originalText = button.textContent;
+        
+        // Desabilitar botão durante processamento
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => {
+            if (response.redirected) {
+                // Redirecionamento ocorreu (sucesso)
+                window.location.href = response.url;
+            } else {
+                // Recarregar página para mostrar mensagens
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            button.disabled = false;
+            button.textContent = originalText;
+            alert('Erro ao salvar agendamento. Tente novamente.');
+        });
     });
 });
 </script>

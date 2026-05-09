@@ -1,8 +1,10 @@
+from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from .models import Cliente, Pet
+from django.utils import timezone
+from .models import Cliente, Pet, Agendamento
 
 # Mock Data: Simulando banco de dados para o Dashboard
 DASHBOARD_DATA = {
@@ -24,9 +26,89 @@ def login_view(request):
     return render(request, 'login.html')
 
 def dashboard_view(request):
-    return render(request, 'dashboard.html', {'dados': DASHBOARD_DATA})
+    hoje = timezone.now().date()
+    
+    # Agendamentos de hoje (ativos no dashboard)
+    agendamentos_hoje_visiveis = Agendamento.objects.filter(
+        data=hoje
+    ).filter(
+        Q(status__in=['pendente', 'em_andamento']) |
+        Q(status='concluido', pago=False)
+    ).order_by('hora_inicio')
+
+    hoje_agendamentos = Agendamento.objects.filter(
+        data=hoje
+    ).exclude(status='cancelado')
+    
+    # Estatísticas
+    stats = {
+        'hoje': hoje_agendamentos.count(),
+        'pendentes': hoje_agendamentos.filter(status='pendente').count(),
+        'concluidos': hoje_agendamentos.filter(status='concluido').count(),
+    }
+    
+    # Agendamentos futuros (não hoje)
+    agendamentos_futuros = Agendamento.objects.filter(
+        data__gt=hoje
+    ).filter(
+        Q(status__in=['pendente', 'em_andamento']) |
+        Q(status='concluido', pago=False)
+    ).order_by('data', 'hora_inicio')
+    
+    context = {
+        'stats': stats,
+        'agendamentos_hoje': agendamentos_hoje_visiveis,
+        'agendamentos_futuros': agendamentos_futuros,
+        'hoje': hoje,
+    }
+    
+    return render(request, 'dashboard.html', context)
 
 def agendamento_view(request):
+    if request.method == 'POST':
+        # Processar o formulário de agendamento
+        cliente_id = request.POST.get('cliente_id')
+        pet_id = request.POST.get('pet_id')
+        data = request.POST.get('data')
+        hora_inicio = request.POST.get('hora_inicio')
+        tipo_servico = request.POST.get('tipo_servico')
+        valor = request.POST.get('valor')
+        recorrente = request.POST.get('recorrente') == 'on'
+        observacoes = request.POST.get('observacoes', '')
+
+        # Validações básicas
+        if not all([cliente_id, pet_id, data, hora_inicio, tipo_servico]):
+            messages.error(request, 'Todos os campos obrigatórios devem ser preenchidos.')
+            return redirect('agendamento')
+
+        try:
+            cliente = Cliente.objects.get(id=cliente_id)
+            pet = Pet.objects.get(id=pet_id, cliente=cliente)
+
+            # Criar agendamento
+            agendamento = Agendamento.objects.create(
+                cliente=cliente,
+                pet=pet,
+                data=data,
+                hora_inicio=hora_inicio,
+                tipo_servico=tipo_servico,
+                valor=valor if valor else None,
+                recorrente=recorrente,
+                observacoes=observacoes
+            )
+
+            messages.success(request, f'Agendamento criado com sucesso para {pet.nome_pet} em {data} às {hora_inicio}!')
+            return redirect('dashboard')
+
+        except Cliente.DoesNotExist:
+            messages.error(request, 'Cliente não encontrado.')
+        except Pet.DoesNotExist:
+            messages.error(request, 'Pet não encontrado ou não pertence ao cliente selecionado.')
+        except Exception as e:
+            messages.error(request, f'Erro ao criar agendamento: {str(e)}')
+
+        return redirect('agendamento')
+
     return render(request, 'agendamento.html')
 
 @require_http_methods(["GET"])
@@ -87,7 +169,29 @@ def api_buscar_pets(request, cliente_id):
     return JsonResponse(dados)
 
 def historico_view(request):
-    return render(request, 'historico.html', {'historico': HISTORICO_MOCK})
+    status = request.GET.get('status', 'todos')
+    query = request.GET.get('q', '').strip()
+
+    historico_query = Agendamento.objects.filter(
+        Q(status='cancelado') | Q(status='concluido', pago=True)
+    )
+
+    if status in ['concluido', 'cancelado']:
+        historico_query = historico_query.filter(status=status)
+
+    if query:
+        historico_query = historico_query.filter(
+            Q(pet__nome_pet__icontains=query) |
+            Q(cliente__nome_cliente__icontains=query) |
+            Q(tipo_servico__icontains=query)
+        )
+
+    historico = historico_query.order_by('-data', '-hora_inicio')
+    return render(request, 'historico.html', {
+        'historico': historico,
+        'selected_status': status,
+        'query': query,
+    })
 
 # --- CLIENTES E PETS ---
 
@@ -193,3 +297,56 @@ def pet_delete_view(request, pet_id):
         messages.success(request, f'Pet {nome_pet} removido com sucesso!')
     
     return redirect('cliente_detail', cliente_id=cliente_id)
+
+# --- APIs PARA DASHBOARD ---
+
+@require_http_methods(["POST"])
+def api_iniciar_agendamento(request, agendamento_id):
+    """Inicia um agendamento (muda status para 'em_andamento')"""
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    
+    if agendamento.status == 'pendente':
+        agendamento.status = 'em_andamento'
+        now = timezone.now()
+        if not agendamento.data_realizacao:
+            agendamento.data_realizacao = now.date()
+        if not agendamento.hora_realizacao:
+            agendamento.hora_realizacao = now.time()
+        agendamento.save()
+        return JsonResponse({'success': True, 'status': agendamento.status, 'status_class': agendamento.status_class})
+    
+    return JsonResponse({'success': False, 'message': 'Não é possível iniciar este agendamento'})
+
+@require_http_methods(["POST"])
+def api_concluir_agendamento(request, agendamento_id):
+    """Conclui um agendamento (muda status para 'concluido')"""
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    
+    if agendamento.status == 'em_andamento':
+        agendamento.status = 'concluido'
+        agendamento.save()
+        return JsonResponse({'success': True, 'status': agendamento.status, 'status_class': agendamento.status_class})
+    
+    return JsonResponse({'success': False, 'message': 'Não é possível concluir este agendamento'})
+
+@require_http_methods(["POST"])
+def api_marcar_pago(request, agendamento_id):
+    """Marca um agendamento como pago"""
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    
+    agendamento.pago = True
+    agendamento.save()
+    
+    return JsonResponse({'success': True, 'pago': agendamento.pago})
+
+@require_http_methods(["POST"])
+def api_cancelar_agendamento(request, agendamento_id):
+    """Cancela um agendamento"""
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    
+    if agendamento.status in ['pendente', 'em_andamento']:
+        agendamento.status = 'cancelado'
+        agendamento.save()
+        return JsonResponse({'success': True, 'status': agendamento.status, 'status_class': agendamento.status_class})
+    
+    return JsonResponse({'success': False, 'message': 'Não é possível cancelar este agendamento'})

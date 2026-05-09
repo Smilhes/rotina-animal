@@ -19,4 +19,10 @@ urlpatterns = [
     # APIs para agendamento
     path('api/buscar-clientes/', views.api_buscar_clientes, name='api_buscar_clientes'),
     path('api/buscar-pets/<int:cliente_id>/', views.api_buscar_pets, name='api_buscar_pets'),
+    
+    # APIs para dashboard
+    path('api/agendamento/<int:agendamento_id>/iniciar/', views.api_iniciar_agendamento, name='api_iniciar_agendamento'),
+    path('api/agendamento/<int:agendamento_id>/concluir/', views.api_concluir_agendamento, name='api_concluir_agendamento'),
+    path('api/agendamento/<int:agendamento_id>/pago/', views.api_marcar_pago, name='api_marcar_pago'),
+    path('api/agendamento/<int:agendamento_id>/cancelar/', views.api_cancelar_agendamento, name='api_cancelar_agendamento'),
 ]
