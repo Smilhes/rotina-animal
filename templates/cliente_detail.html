@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="pt-3 pb-2 mb-3 border-bottom d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h2">{{ cliente.nome_cliente }}</h1>
+        <small class="text-muted">Telefone: {{ cliente.telefone }}</small>
+    </div>
+    <div>
+        <a href="{% url 'cliente_edit' cliente.id %}" class="btn btn-warning me-2">
+            <i class="bi bi-pencil me-2"></i>Editar Cliente
+        </a>
+        <a href="{% url 'cadastro_cliente' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {% for message in messages %}
+        {{ message }}
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Dados do Cliente -->
+    <div class="col-lg-5">
+        <div class="card card-tv mb-4">
+            <div class="card-header bg-white fw-bold">Dados do Tutor</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">NOME COMPLETO</label>
+                    <p class="form-control-plaintext">{{ cliente.nome_cliente }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">TELEFONE / WHATSAPP</label>
+                    <p class="form-control-plaintext">{{ cliente.telefone }}</p>
+                </div>
+                {% if cliente.cpf %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">CPF</label>
+                    <p class="form-control-plaintext">{{ cliente.cpf }}</p>
+                </div>
+                {% endif %}
+                {% if cliente.rua %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">ENDEREÇO</label>
+                    <p class="form-control-plaintext">{{ cliente.rua }}, {{ cliente.numero }} - {{ cliente.bairro }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Pets -->
+    <div class="col-lg-7">
+        <div class="card card-tv">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Pets Vinculados</span>
+                <a href="{% url 'pet_create' cliente.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Adicionar Novo Pet
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if pets %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome do Pet</th>
+                                <th>Raça</th>
+                                <th>Porte</th>
+                                <th>Idade</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pet in pets %}
+                            <tr>
+                                <td class="fw-bold">{{ pet.nome_pet }}</td>
+                                <td><span class="badge bg-light text-dark">{{ pet.raca_pet }}</span></td>
+                                <td><span class="badge bg-info">{{ pet.get_porte_pet_display }}</span></td>
+                                <td>{{ pet.idade_pet|default:"N/A" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'pet_edit' pet.id %}" class="btn btn-sm btn-light" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{% url 'pet_delete' pet.id %}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover este pet?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox fs-3"></i>
+                    <p class="mt-2">Nenhum pet cadastrado. <a href="{% url 'pet_create' cliente.id %}">Adicionar um novo.</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
