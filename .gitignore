@@ -1,5 +1,21 @@
-venv/
-.env
+# Ignore database files
 db.sqlite3
+
+# Byte-compiled / cache
+core/__pycache__/
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Virtual environments
+venv/
+.env/
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
+
+# Build
+dist/
+build/"__pycache__/" 
