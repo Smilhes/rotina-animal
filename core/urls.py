@@ -1,7 +1,9 @@
 from django.urls import path
 from . import views
+from django.contrib import admin
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
     path('', views.login_view, name='login'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
@@ -18,4 +20,9 @@ urlpatterns = [
     
     path('agendar/', views.agendamento_view, name='agendamento'),
     path('historico/', views.historico_view, name='historico'),
+
+    path('api/buscar-clientes/', views.api_buscar_clientes, name='api_buscar_clientes'),
+    path('api/buscar-pets/<int:cliente_id>/', views.api_buscar_pets, name='api_buscar_pets'),
+    path('api/agendamento/<int:agendamento_id>/iniciar/', views.api_iniciar_agendamento, name='api_iniciar_agendamento'),
+    path('api/agendamento/<int:agendamento_id>/concluir/', views.api_concluir_agendamento, name='api_concluir_agendamento'),
 ]
