@@ -26,88 +26,60 @@ def login_view(request):
     return render(request, 'login.html')
 
 def dashboard_view(request):
-    hoje = timezone.now().date()
+    from django.utils import timezone
+    hoje = timezone.localtime(timezone.now()).date()
     
-    # Agendamentos de hoje (ativos no dashboard)
-    agendamentos_hoje_visiveis = Agendamento.objects.filter(
+    agendamentos_hoje = Agendamento.objects.filter(
         data=hoje
-    ).filter(
-        Q(status__in=['pendente', 'em_andamento']) |
-        Q(status='concluido', pago=False)
-    ).order_by('hora_inicio')
+    ).exclude(status='cancelado').order_by('hora_inicio')
 
-    hoje_agendamentos = Agendamento.objects.filter(
-        data=hoje
-    ).exclude(status='cancelado')
-    
-    # Estatísticas
-    stats = {
-        'hoje': hoje_agendamentos.count(),
-        'pendentes': hoje_agendamentos.filter(status='pendente').count(),
-        'concluidos': hoje_agendamentos.filter(status='concluido').count(),
-    }
-    
-    # Agendamentos futuros (não hoje)
     agendamentos_futuros = Agendamento.objects.filter(
         data__gt=hoje
-    ).filter(
-        Q(status__in=['pendente', 'em_andamento']) |
-        Q(status='concluido', pago=False)
-    ).order_by('data', 'hora_inicio')
+    ).exclude(status='cancelado').order_by('data', 'hora_inicio')
     
-    context = {
-        'stats': stats,
-        'agendamentos_hoje': agendamentos_hoje_visiveis,
-        'agendamentos_futuros': agendamentos_futuros,
-        'hoje': hoje,
+    stats = {
+        'hoje': agendamentos_hoje.count(),
+        'pendentes': agendamentos_hoje.filter(status='pendente').count(),
+        'concluidos': agendamentos_hoje.filter(status='concluido').count(),
     }
     
-    return render(request, 'dashboard.html', context)
+    return render(request, 'dashboard.html', {
+        'stats': stats,
+        'agendamentos_hoje': agendamentos_hoje,
+        'agendamentos_futuros': agendamentos_futuros,
+        'hoje': hoje,
+    })
 
 def agendamento_view(request):
     if request.method == 'POST':
-        # Processar o formulário de agendamento
         cliente_id = request.POST.get('cliente_id')
         pet_id = request.POST.get('pet_id')
         data = request.POST.get('data')
         hora_inicio = request.POST.get('hora_inicio')
         tipo_servico = request.POST.get('tipo_servico')
         valor = request.POST.get('valor')
-        recorrente = request.POST.get('recorrente') == 'on'
         observacoes = request.POST.get('observacoes', '')
 
-        # Validações básicas
         if not all([cliente_id, pet_id, data, hora_inicio, tipo_servico]):
-            messages.error(request, 'Todos os campos obrigatórios devem ser preenchidos.')
+            messages.error(request, 'Por favor, preencha todos os campos obrigatórios.')
             return redirect('agendamento')
 
         try:
-            cliente = Cliente.objects.get(id=cliente_id)
-            pet = Pet.objects.get(id=pet_id, cliente=cliente)
-
-            # Criar agendamento
-            agendamento = Agendamento.objects.create(
-                cliente=cliente,
-                pet=pet,
+            Agendamento.objects.create(
+                cliente_id=int(cliente_id),
+                pet_id=int(pet_id),
                 data=data,
                 hora_inicio=hora_inicio,
                 tipo_servico=tipo_servico,
-                valor=valor if valor else None,
-                recorrente=recorrente,
-                observacoes=observacoes
+                valor=valor if valor else 0,
+                observacoes=observacoes,
+                status='pendente'
             )
-
-            messages.success(request, f'Agendamento criado com sucesso para {pet.nome_pet} em {data} às {hora_inicio}!')
+            messages.success(request, 'Agendamento realizado com sucesso!')
             return redirect('dashboard')
-
-        except Cliente.DoesNotExist:
-            messages.error(request, 'Cliente não encontrado.')
-        except Pet.DoesNotExist:
-            messages.error(request, 'Pet não encontrado ou não pertence ao cliente selecionado.')
         except Exception as e:
-            messages.error(request, f'Erro ao criar agendamento: {str(e)}')
-
-        return redirect('agendamento')
+            messages.error(request, f'Erro ao salvar: {e}')
+            return redirect('agendamento')
 
     return render(request, 'agendamento.html')
 

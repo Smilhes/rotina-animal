@@ -6,7 +6,9 @@
 
 <div class="card card-tv">
     <div class="card-body p-4">
-        <form class="row g-3" id="formularioAgendamento">
+        <form class="row g-3" method="POST" action="{% url 'agendamento' %}">
+            {% csrf_token %}
+            
             <div class="col-md-6">
                 <label class="form-label">Tutor (Pesquisar)</label>
                 <div class="input-group">
@@ -14,37 +16,36 @@
                         type="text" 
                         class="form-control form-control-lg" 
                         id="inputTutor"
-                        placeholder="Nome ou CPF"
+                        placeholder="Clique em pesquisar tutor..."
                         readonly
+                        required
                     >
                     <button 
                         class="btn btn-outline-primary" 
                         type="button" 
                         data-bs-toggle="modal" 
                         data-bs-target="#modalClientes"
-                        id="btnPesquisarTutor"
                     >
                         <i class="bi bi-search me-2"></i>Pesquisar
                     </button>
                 </div>
                 <input type="hidden" id="clienteId" name="cliente_id">
-                <input type="hidden" id="petId" name="pet_id">
             </div>
 
             <div class="col-md-6">
                 <label class="form-label">Pet</label>
-                <select class="form-select form-control-lg" id="selectPet" name="pet_id" disabled>
+                <select class="form-select form-control-lg" id="selectPet" name="pet_id" disabled required>
                     <option value="">Selecione um cliente primeiro</option>
                 </select>
             </div>
 
             <div class="col-md-3">
                 <label class="form-label">Data</label>
-                <input type="date" class="form-control" name="data">
+                <input type="date" class="form-control" name="data" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Hora Início</label>
-                <input type="time" class="form-control" name="hora_inicio">
+                <input type="time" class="form-control" name="hora_inicio" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tipo de Serviço</label>
@@ -52,8 +53,6 @@
                     <option>Banho</option>
                     <option>Tosa Completa</option>
                     <option>Tosa Higiênica</option>
-                    <option>Corte de Unhas</option>
-                    <option>Limpeza de Ouvidos</option>
                     <option>Banho + Tosa</option>
                 </select>
             </div>
@@ -64,15 +63,8 @@
 
             <div class="col-12 mt-4">
                 <div class="form-check form-switch p-3 border rounded bg-light">
-                    <input 
-                        class="form-check-input ms-0 me-2" 
-                        type="checkbox" 
-                        id="recorrente"
-                        name="recorrente"
-                    >
-                    <label class="form-check-label fw-bold" for="recorrente">
-                        Pacote Recorrente (Semanal/Quinzenal)
-                    </label>
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="recorrente">
+                    <label class="form-check-label fw-bold" for="recorrente">Pacote Recorrente</label>
                 </div>
             </div>
 
@@ -84,7 +76,6 @@
     </div>
 </div>
 
-<!-- Modal de Pesquisa de Clientes -->
 <div class="modal fade" id="modalClientes" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -93,32 +84,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Digite o nome ou CPF do tutor:</label>
-                    <input 
-                        type="text" 
-                        class="form-control form-control-lg" 
-                        id="inputBuscaClientes"
-                        placeholder="Ex: João Silva ou 123.456.789-00"
-                        autocomplete="off"
-                    >
-                </div>
-
-                <div id="resultadosClientes" class="mt-3" style="display: none;">
-                    <h6 class="mb-3">Resultados da busca:</h6>
-                    <div id="listaClientes" class="list-group" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Resultados serão preenchidos aqui -->
-                    </div>
-                </div>
-
-                <div id="nenhumResultado" class="alert alert-info mt-3" style="display: none;">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Nenhum cliente encontrado. Tente outro nome ou CPF.
-                </div>
-
-                <div id="semBusca" class="alert alert-secondary mt-3">
-                    <i class="bi bi-search me-2"></i>
-                    Digite acima para pesquisar clientes disponíveis.
+                <input type="text" class="form-control mb-3" id="inputBuscaClientes" placeholder="Digite nome ou CPF...">
+                <div id="listaClientes" class="list-group">
                 </div>
             </div>
         </div>
@@ -127,155 +94,42 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputBuscaClientes = document.getElementById('inputBuscaClientes');
-    const listaClientes = document.getElementById('listaClientes');
-    const resultadosClientes = document.getElementById('resultadosClientes');
-    const nenhumResultado = document.getElementById('nenhumResultado');
-    const semBusca = document.getElementById('semBusca');
+    const inputBusca = document.getElementById('inputBuscaClientes');
+    const lista = document.getElementById('listaClientes');
     const inputTutor = document.getElementById('inputTutor');
-    const clienteId = document.getElementById('clienteId');
+    const clienteIdHidden = document.getElementById('clienteId');
     const selectPet = document.getElementById('selectPet');
-    const modalClientes = new bootstrap.Modal(document.getElementById('modalClientes'));
+    const modal = new bootstrap.Modal(document.getElementById('modalClientes'));
 
-    let timeoutBusca;
-
-    // Buscar clientes enquanto digita
-    inputBuscaClientes.addEventListener('input', function() {
-        clearTimeout(timeoutBusca);
-        const termo = this.value.trim();
-
-        if (termo.length < 2) {
-            resultadosClientes.style.display = 'none';
-            nenhumResultado.style.display = 'none';
-            semBusca.style.display = 'block';
-            listaClientes.innerHTML = '';
-            return;
-        }
-
-        semBusca.style.display = 'none';
-
-        timeoutBusca = setTimeout(() => {
-            fetch(`/api/buscar-clientes/?termo=${encodeURIComponent(termo)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.clientes.length === 0) {
-                        resultadosClientes.style.display = 'none';
-                        nenhumResultado.style.display = 'block';
-                        listaClientes.innerHTML = '';
-                    } else {
-                        nenhumResultado.style.display = 'none';
-                        resultadosClientes.style.display = 'block';
-                        
-                        listaClientes.innerHTML = data.clientes.map(cliente => `
-                            <button type="button" class="list-group-item list-group-item-action" 
-                                    onclick="selecionarCliente(${cliente.id}, '${cliente.nome}', '${cliente.telefone}')">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <strong>${cliente.nome}</strong>
-                                    <small class="text-muted">${cliente.total_pets} pet(s)</small>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-telephone me-1"></i>${cliente.telefone}
-                                    {% if cliente.cpf %}
-                                        | CPF: ${cliente.cpf}
-                                    {% endif %}
-                                </small>
-                            </button>
-                        `).join('');
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao buscar clientes:', error);
-                    resultadosClientes.style.display = 'none';
-                    nenhumResultado.style.display = 'block';
-                });
-        }, 300);
+    inputBusca.addEventListener('input', function() {
+        if (this.value.length < 2) return;
+        fetch(`/api/buscar-clientes/?termo=${this.value}`)
+            .then(r => r.json())
+            .then(data => {
+                lista.innerHTML = data.clientes.map(c => `
+                    <button type="button" class="list-group-item list-group-item-action" onclick="selecionarCliente(${c.id}, '${c.nome}')">
+                        ${c.nome} - ${c.telefone}
+                    </button>
+                `).join('');
+            });
     });
 
-    window.selecionarCliente = function(id, nome, telefone) {
-        // Preencher input do tutor
-        inputTutor.value = `${nome} - ${telefone}`;
-        clienteId.value = id;
-
-        // Carregar pets do cliente
-        carregarPetsCliente(id);
-
-        // Fechar modal
-        modalClientes.hide();
+    window.selecionarCliente = function(id, nome) {
+        inputTutor.value = nome;
+        clienteIdHidden.value = id;
+        carregarPets(id);
+        modal.hide();
     };
 
-    function carregarPetsCliente(clienteId) {
-        fetch(`/api/buscar-pets/${clienteId}/`)
-            .then(response => response.json())
+    function carregarPets(cid) {
+        fetch(`/api/buscar-pets/${cid}/`)
+            .then(r => r.json())
             .then(data => {
-                selectPet.innerHTML = '<option value="">Selecione o pet</option>';
-                
-                if (data.pets.length > 0) {
-                    data.pets.forEach(pet => {
-                        const option = document.createElement('option');
-                        option.value = pet.id;
-                        option.textContent = pet.nome;
-                        selectPet.appendChild(option);
-                    });
-                    selectPet.disabled = false;
-                } else {
-                    const option = document.createElement('option');
-                    option.textContent = 'Nenhum pet cadastrado para este cliente';
-                    option.disabled = true;
-                    selectPet.appendChild(option);
-                    selectPet.disabled = true;
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao carregar pets:', error);
-                selectPet.innerHTML = '<option>Erro ao carregar pets</option>';
+                selectPet.innerHTML = '<option value="">Selecione o pet</option>' + 
+                    data.pets.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                selectPet.disabled = false;
             });
     }
-
-    // Limpar ao abrir modal
-    document.getElementById('modalClientes').addEventListener('show.bs.modal', function() {
-        inputBuscaClientes.value = '';
-        inputBuscaClientes.focus();
-        resultadosClientes.style.display = 'none';
-        nenhumResultado.style.display = 'none';
-        semBusca.style.display = 'block';
-        listaClientes.innerHTML = '';
-    });
-
-    // Processar formulário de agendamento
-    document.getElementById('formularioAgendamento').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const button = this.querySelector('button[type="submit"]');
-        const originalText = button.textContent;
-        
-        // Desabilitar botão durante processamento
-        button.disabled = true;
-        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            }
-        })
-        .then(response => {
-            if (response.redirected) {
-                // Redirecionamento ocorreu (sucesso)
-                window.location.href = response.url;
-            } else {
-                // Recarregar página para mostrar mensagens
-                window.location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            button.disabled = false;
-            button.textContent = originalText;
-            alert('Erro ao salvar agendamento. Tente novamente.');
-        });
-    });
 });
 </script>
 {% endblock %}
